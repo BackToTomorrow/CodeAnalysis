@@ -35,3 +35,4 @@ class SymbolRelation:
     to_symbol_id: str
     relation_type: str  # e.g. "calls", "inherits"
 
+

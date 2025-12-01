@@ -1,15 +1,14 @@
 from __future__ import annotations
 
 import json
-from pathlib import Path
 from typing import Dict, Iterable, List, Tuple
-
-import numpy as np
 import sqlite3
 import time
 
+import numpy as np
+
 from .config import INDEX_DB_PATH
-from .index_schema import CodeChunk
+from ..core.models import CodeChunk
 
 
 def ensure_db() -> sqlite3.Connection:
@@ -402,4 +401,5 @@ def upsert_symbol_relations(conn: sqlite3.Connection, chunks: Iterable[CodeChunk
                 """,
                 rows,
             )
+
 

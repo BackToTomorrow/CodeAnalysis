@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import uvicorn
 
-from src.api import app
+from src.api.http import app
 
 
 def main() -> None:

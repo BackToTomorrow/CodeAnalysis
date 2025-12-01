@@ -6,10 +6,10 @@ from typing import List
 from fastapi import FastAPI
 from pydantic import BaseModel
 
-from .indexer import index_project, reindex_paths, sync_index
-from .search import SearchResult, hybrid_search, semantic_search, text_search
-from .storage import ensure_db, get_progress, get_chunks_by_ids
-from .prompting import build_context_prompt
+from ..core.indexing import index_project, reindex_paths, sync_index
+from ..search.hybrid import SearchResult, hybrid_search, semantic_search, text_search
+from ..infra.sqlite_store import ensure_db, get_progress, get_chunks_by_ids
+from ..search.prompting import build_context_prompt
 
 
 class IndexRequest(BaseModel):
@@ -111,5 +111,6 @@ def hybrid_context_endpoint(req: HybridContextRequest) -> HybridContextResponse:
         template=req.prompt_template,
     )
     return HybridContextResponse(prompt=prompt, used_ids=ids)
+
 
 

@@ -2,13 +2,10 @@ from __future__ import annotations
 
 from pathlib import Path
 from typing import Iterable, List
-import os
 
-from .ast_csharp import CSharpAstParser
-from .config import CSHARP_EXTENSIONS
-from .embedding import embed_texts
-from .index_schema import CodeChunk
-from .storage import (
+from ..infra.config import CSHARP_EXTENSIONS
+from ..infra.embeddings import embed_texts
+from ..infra.sqlite_store import (
     ensure_db,
     upsert_chunks,
     read_file_index_state,
@@ -19,7 +16,9 @@ from .storage import (
     finish_progress,
     upsert_symbol_relations,
 )
-from .vector_store import upsert_embeddings as upsert_vectors, delete_by_file_paths
+from ..infra.lancedb_store import upsert_embeddings as upsert_vectors, delete_by_file_paths
+from .csharp_parser import CSharpAstParser
+from .models import CodeChunk
 
 
 def discover_csharp_files(root: Path) -> List[Path]:

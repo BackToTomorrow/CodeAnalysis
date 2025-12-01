@@ -7,7 +7,7 @@ from typing import Iterable, List, Dict
 from tree_sitter import Parser
 from tree_sitter_languages import get_language
 
-from .index_schema import CodeChunk, SymbolInfo, SymbolRelation
+from .models import CodeChunk, SymbolInfo, SymbolRelation
 
 
 class CSharpAstParser:
@@ -308,4 +308,5 @@ class CSharpAstParser:
         return source_bytes[node.start_byte : node.end_byte].decode(
             "utf-8", errors="ignore"
         )
+
 

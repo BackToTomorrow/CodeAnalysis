@@ -97,29 +97,29 @@ curl -X POST http://127.0.0.1:8000/search/text ^
 
 ### 6. How it maps to a “Continue”-style indexer
 
-- **AST layer (`src/ast_csharp.py`)**:
+- **AST layer (`src/core/csharp_parser.py`)**:
   - Uses tree-sitter C#.
   - Extracts `class`, `struct`, `interface`, `enum`, `method`, `property` symbols.
-  - Attaches them to file‑level `CodeChunk`s (you can refine this to symbol‑level chunks).
+  - Attaches them to `CodeChunk`s defined in `src/core/models.py` (you can refine this to symbol‑level chunks).
 
-- **Storage layer (`src/storage.py` + `src/vector_store.py`)**:
+- **Storage layer (`src/infra/sqlite_store.py` + `src/infra/lancedb_store.py`)**:
   - `chunks` table stores code, line ranges, language, metadata (symbols etc.).
   - `chunks_fts` is an SQLite FTS5 virtual table for full‑text search.
   - `code_vectors` LanceDB table stores vectors for semantic search.
 
-- **Indexer (`src/indexer.py`)**:
+- **Indexer (`src/core/indexing.py`)**:
   - Walks all `*.cs` files.
   - Parses AST and builds `CodeChunk`s.
   - Upserts chunks into SQLite + FTS.
   - Calls the external embed service and stores vectors in LanceDB.
   - Keeps per‑file index state and exposes a smart `/index/sync` endpoint (full vs incremental).
 
-- **Search (`src/search.py`)**:
+- **Search (`src/search/hybrid.py`)**:
   - `text_search` uses FTS only.
   - `semantic_search` uses LanceDB vector similarity only.
   - `hybrid_search` linearly combines both (parameter `alpha`).
 
-- **Context builder (`src/prompting.py` + `/search/hybrid/context`)**:
+- **Context builder (`src/search/prompting.py` + `/search/hybrid/context`)**:
   - Takes hybrid search results and builds a high‑quality prompt string
     (code snippets + instructions + original question) that you can send
     directly to a chat model.
@@ -131,7 +131,7 @@ For quick local testing, this repo includes a small C# console app under `test_c
 - **Target framework**: `net8.0`
 - **Entry point**: `test_csharp_project/Program.cs`
 - Contains a mix of **classes**, **enums**, **interfaces**, **services**, and **method calls** so
-  you can easily inspect symbol extraction and relations from `src/ast_csharp.py`.
+  you can easily inspect symbol extraction and relations from `src/core/csharp_parser.py`.
 
 To index this built‑in test project, you can point the `root` to the folder in this repo. For example,
 if your workspace is located at `C:\Users\you\Desktop\Project\CodeAnalysis`:
@@ -152,7 +152,7 @@ You can then experiment with the search endpoints against this small, known code
   - Fetch chunk content + symbol metadata by `id`.
   - Index **incremental changes** from your editor.
 - Tune the `hybrid_search` `alpha` parameter to balance semantic vs keyword matches.
-- Customize the context prompt in `src/prompting.py` to match your preferred system prompt.
+- Customize the context prompt in `src/search/prompting.py` to match your preferred system prompt.
 - Add authentication / multi‑repo support around the existing HTTP API.
 
 

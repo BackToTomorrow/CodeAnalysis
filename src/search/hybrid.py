@@ -3,9 +3,9 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import List
 
-from .embedding import embed_texts
-from .storage import ensure_db, fts_search
-from .vector_store import vector_search
+from ..infra.embeddings import embed_texts
+from ..infra.sqlite_store import ensure_db, fts_search
+from ..infra.lancedb_store import vector_search
 
 
 @dataclass
@@ -52,5 +52,6 @@ def text_search(query: str, k: int = 20) -> List[SearchResult]:
     conn = ensure_db()
     fts_results = fts_search(conn, query, limit=k)
     return [SearchResult(id=cid, score=-rank, mode="fts") for cid, rank in fts_results]
+
 
 

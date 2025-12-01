@@ -1,13 +1,12 @@
 from __future__ import annotations
 
-from dataclasses import asdict
 from typing import Iterable, List, Tuple
 
 import lancedb
 import pyarrow as pa
 
 from .config import LANCEDB_DIR
-from .index_schema import CodeChunk
+from ..core.models import CodeChunk
 
 
 TABLE_NAME = "code_vectors"
@@ -99,5 +98,6 @@ def vector_search(query_vec: List[float], limit: int = 20) -> List[Tuple[str, fl
         score = 1.0 / (1.0 + dist)
         results.append((row["id"], score))
     return results
+
 
 

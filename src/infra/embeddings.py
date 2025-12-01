@@ -103,3 +103,5 @@ def embed_texts(texts: Iterable[str]) -> List[List[float]]:
     client = _get_client()
     return client.embed(list(texts))
 
+
+
