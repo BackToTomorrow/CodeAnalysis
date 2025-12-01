@@ -1,0 +1,7 @@
+tree_sitter==0.23.2
+tree_sitter_languages==1.10.2
+numpy
+uvicorn==0.32.0
+fastapi==0.115.5
+lancedb
+requests==2.32.3
