@@ -124,7 +124,27 @@ curl -X POST http://127.0.0.1:8000/search/text ^
     (code snippets + instructions + original question) that you can send
     directly to a chat model.
 
-### 7. Next steps / customization
+### 7. Built‑in C# test project (for debugging)
+
+For quick local testing, this repo includes a small C# console app under `test_csharp_project`.
+
+- **Target framework**: `net8.0`
+- **Entry point**: `test_csharp_project/Program.cs`
+- Contains a mix of **classes**, **enums**, **interfaces**, **services**, and **method calls** so
+  you can easily inspect symbol extraction and relations from `src/ast_csharp.py`.
+
+To index this built‑in test project, you can point the `root` to the folder in this repo. For example,
+if your workspace is located at `C:\Users\you\Desktop\Project\CodeAnalysis`:
+
+```bash
+curl -X POST http://127.0.0.1:8000/index/sync ^
+  -H "Content-Type: application/json" ^
+  -d "{\\"root\\": \\"C:\\\\Users\\\\you\\\\Desktop\\\\Project\\\\CodeAnalysis\\\\test_csharp_project\\"}"
+```
+
+You can then experiment with the search endpoints against this small, known codebase.
+
+### 8. Next steps / customization
 
 - Split large files into **semantic chunks** (per method or fixed line window).
 - Store **symbol relationships** (e.g. calls, inheritance) in an extra table for richer queries.
