@@ -22,8 +22,12 @@ class CSharpAstParser:
         tree = self._parser.parse(source_bytes)
         root = tree.root_node
 
-        symbols: List[SymbolInfo] = []
+        text = source_bytes.decode("utf-8", errors="ignore")
+        lines = text.splitlines()
+        total_lines = len(lines)
 
+        # First, extract all symbols for the file.
+        symbols: List[SymbolInfo] = []
         for node in root.children:
             symbols.extend(self._extract_symbols(path, node, source_bytes))
 
@@ -37,23 +41,106 @@ class CSharpAstParser:
             path, root, source_bytes, symbols_by_key
         )
 
-        # For now, create a single big chunk per file, tagged with symbol + relation metadata
-        text = source_bytes.decode("utf-8", errors="ignore")
-        lines = text.splitlines()
-        chunk = CodeChunk(
-            id=f"file:{path}",
-            file_path=path,
-            start_line=1,
-            end_line=len(lines),
-            content=text,
-            language="csharp",
-            symbols=symbols,
-            extra={
-                "symbol_dicts": [asdict(s) for s in symbols],
-                "relations": [asdict(r) for r in relations],
-            },
-        )
-        return [chunk]
+        # --- Smart semantic chunking strategy ---------------------------------
+        #
+        # - Prefer one chunk per top-level symbol (class/struct/interface/enum/method/property).
+        # - For very large symbols, split further into fixed-size line windows with overlap.
+        # - If the file has no symbols (e.g. script-style code), fall back to windowed chunks
+        #   over the whole file.
+        #
+        MAX_SYMBOL_LINES = 300
+        WINDOW_SIZE = 120
+        WINDOW_OVERLAP = 20
+
+        def make_chunk_id(suffix: str) -> str:
+            return f"{path}:{suffix}"
+
+        chunks: List[CodeChunk] = []
+
+        def add_window_chunk(start_line: int, end_line: int, label: str) -> None:
+            # Clamp to valid range
+            s = max(1, start_line)
+            e = min(total_lines, end_line)
+            if e < s:
+                return
+            content = "\n".join(lines[s - 1 : e])
+            chunk_symbols = [
+                sym
+                for sym in symbols
+                if not (sym.end_line < s or sym.start_line > e)
+            ]
+            chunk_relations = [
+                r
+                for r in relations
+                if any(
+                    sym.id == r.from_symbol_id or sym.id == r.to_symbol_id
+                    for sym in chunk_symbols
+                )
+            ]
+            chunks.append(
+                CodeChunk(
+                    id=make_chunk_id(label),
+                    file_path=path,
+                    start_line=s,
+                    end_line=e,
+                    content=content,
+                    language="csharp",
+                    symbols=chunk_symbols,
+                    extra={
+                        "symbol_dicts": [asdict(s) for s in chunk_symbols],
+                        "relations": [asdict(r) for r in chunk_relations],
+                    },
+                )
+            )
+
+        # Group symbols by their span; we treat each symbol as a candidate chunk region.
+        if symbols:
+            for idx, sym in enumerate(symbols):
+                span_lines = sym.end_line - sym.start_line + 1
+                if span_lines <= MAX_SYMBOL_LINES:
+                    # Single symbol-sized chunk
+                    add_window_chunk(
+                        sym.start_line,
+                        sym.end_line,
+                        f"symbol:{idx}:{sym.symbol_kind}:{sym.symbol_name}",
+                    )
+                else:
+                    # Large symbol: split into overlapping windows
+                    start = sym.start_line
+                    window_idx = 0
+                    while start <= sym.end_line:
+                        end = start + WINDOW_SIZE - 1
+                        add_window_chunk(
+                            start,
+                            min(end, sym.end_line),
+                            f"symbol:{idx}:{sym.symbol_kind}:{sym.symbol_name}:win{window_idx}",
+                        )
+                        if end >= sym.end_line:
+                            break
+                        start = end - WINDOW_OVERLAP + 1
+                        window_idx += 1
+        else:
+            # No symbols found: fall back to sliding windows across the file.
+            if total_lines == 0:
+                return []
+            if total_lines <= WINDOW_SIZE:
+                add_window_chunk(1, total_lines, "file:0")
+            else:
+                start = 1
+                window_idx = 0
+                while start <= total_lines:
+                    end = start + WINDOW_SIZE - 1
+                    add_window_chunk(
+                        start,
+                        min(end, total_lines),
+                        f"file:win{window_idx}",
+                    )
+                    if end >= total_lines:
+                        break
+                    start = end - WINDOW_OVERLAP + 1
+                    window_idx += 1
+
+        return chunks
 
     # ---- internals -----------------------------------------------------
 
